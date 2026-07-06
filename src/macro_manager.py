@@ -1,12 +1,19 @@
 import time
 import pydirectinput
+import ctypes
+import json
 
 from src.capture import ScreenCapture
 from src.vision import SpawnDetector
 from src.routes import RoutePlayer
 from src.input_control import InputController
 from src.config import SPAWN_CONFIDENCE_THRESHOLD
+from src.config import READY_BUTTON_PATH
 
+try:
+    ctypes.windll.user32.SetProcessDPIAware()
+except Exception:
+    pass
 
 class MacroManager:
     def __init__(self):
@@ -18,12 +25,12 @@ class MacroManager:
         self.running = False
         self.stop_requested = False
 
-        self.ready_button_pos = (125, 400)  # set manually (x, y)
+        self.ready_button_pos = self.load_ready_button_pos()
 
         self.starting_wait = 5
         self.transition_wait = 10
         self.wave_duration = 300
-        self.wave_survived_wait = 11.8
+        self.wave_survived_wait = 12
         self.intermission_wait = 20
 
         self.spawn_retry_delay = 0.5
@@ -40,27 +47,42 @@ class MacroManager:
             time.sleep(0.05)
 
         return True
+    
+    def load_ready_button_pos(self):
+        try:
+            with open(READY_BUTTON_PATH, "r") as f:
+                data = json.load(f)
+
+            pos = data.get("ready_button_pos")
+            if pos and len(pos) == 2:
+                return tuple(pos)
+
+        except FileNotFoundError:
+            pass
+
+        return None
+
     def click_ready_button(self):
         if self.ready_button_pos is None:
             print("Ready button position is not set.")
             return
 
         x, y = self.ready_button_pos
+        print(f"Clicking Ready button at ({x}, {y})")
 
         pydirectinput.moveTo(x, y, duration=0)
-        time.sleep(0.3)
+        time.sleep(0.25)
 
-        # Small hover wiggle helps Roblox notice the cursor is over the button
-        pydirectinput.moveRel(1, 0, duration=0)
+        # Hover wiggle using absolute coordinates, not relative movement
+        pydirectinput.moveTo(x + 2, y, duration=0)
         time.sleep(0.05)
-        pydirectinput.moveRel(-1, 0, duration=0)
-        time.sleep(0.2)
+        pydirectinput.moveTo(x, y, duration=0)
+        time.sleep(0.20)
 
         pydirectinput.mouseDown(button="left")
-        time.sleep(0.2)
+        time.sleep(0.15)
         pydirectinput.mouseUp(button="left")
 
-        time.sleep(0.2)
 
     def wait_for_spawn_detection(self):
         while not self.stop_requested:
@@ -84,11 +106,21 @@ class MacroManager:
             self.sleep_interruptible(self.spawn_retry_delay)
 
         return None
-
     def run_main_loop_once(self, wave_number):
         print(f"\n=== Wave {wave_number} main loop ===")
 
+        wave_start = time.perf_counter()
+
+        # Small delay before detecting spawn, every wave
+        if not self.sleep_interruptible(0.1):
+            return False
+
+        detection_start = time.perf_counter()
         spawn = self.wait_for_spawn_detection()
+        detection_end = time.perf_counter()
+
+        detection_time = detection_end - detection_start
+        print(f"Spawn detection took {detection_time:.3f}s")
 
         if spawn is None:
             return False
@@ -96,15 +128,15 @@ class MacroManager:
         if self.stop_requested:
             return False
 
-        wave_start = time.perf_counter()
-
         self.player.play(spawn)
 
-        elapsed = time.perf_counter() - wave_start
-        remaining = max(0, self.wave_duration - elapsed)
+        elapsed_total = time.perf_counter() - wave_start
+        remaining = max(0, self.wave_duration - elapsed_total)
 
         print(f"Waiting {remaining:.2f}s until wave ends")
-        self.sleep_interruptible(remaining)
+
+        if not self.sleep_interruptible(remaining):
+            return False
 
         print("Wave ended. Pressing Q to unrev minigun.")
         self.input.tap_key("q")
@@ -135,12 +167,18 @@ class MacroManager:
 
     def keep_alive_after_finished(self):
         print("Finished requested waves.")
+        print("Waiting for wave survived screen...")
+        if not self.sleep_interruptible(self.wave_survived_wait + 5):
+            return
         print("Pressing ready/unready button if configured.")
 
         self.click_ready_button()
 
         print("Moving mouse to centre and turning autoclicker back on.")
-        pydirectinput.moveTo(960, 540)
+        pydirectinput.moveTo(960 + 2, 540, duration=0)
+        time.sleep(0.05)
+        pydirectinput.moveTo(960, 540, duration=0)
+        time.sleep(0.20)
         self.input.tap_key("f6")
 
     def run(self, wave_count):

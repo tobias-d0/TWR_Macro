@@ -3022,29 +3022,5 @@
         "type": "mouse_move",
         "dx": -6,
         "dy": 0
-    },
-    {
-        "time": 18.0184,
-        "type": "mouse_move",
-        "dx": -6,
-        "dy": 1
-    },
-    {
-        "time": 18.026,
-        "type": "mouse_move",
-        "dx": -6,
-        "dy": 0
-    },
-    {
-        "time": 18.0336,
-        "type": "mouse_move",
-        "dx": -6,
-        "dy": 1
-    },
-    {
-        "time": 18.1021,
-        "type": "mouse_move",
-        "dx": -2,
-        "dy": 0
     }
 ]

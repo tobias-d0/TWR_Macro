@@ -3,7 +3,6 @@ import cv2
 
 from src.config import CROPPED_DIR, CROP_CONFIG_PATH
 
-
 class SpawnDetector:
     def __init__(self):
         self.crop_box = self._load_crop_box()

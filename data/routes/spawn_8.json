@@ -12833,5 +12833,26 @@
         "type": "mouse_move",
         "dx": 0,
         "dy": 3
+    },
+    {
+        "time": 56.3,
+        "type": "key_down",
+        "key": "a"
+    },
+    {
+        "time": 56.4,
+        "type": "key_up",
+        "key": "a"
+    },
+    {
+        
+        "time": 56.4,
+        "type": "key_down",
+        "key": "s"
+    },
+    {
+        "time": 56.75,
+        "type": "key_up",
+        "key": "s"
     }
 ]

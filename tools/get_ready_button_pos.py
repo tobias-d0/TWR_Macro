@@ -2,6 +2,12 @@ import json
 import time
 from pathlib import Path
 from pynput import mouse
+import ctypes
+
+try:
+    ctypes.windll.user32.SetProcessDPIAware()
+except Exception:
+    pass
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 CONFIG_PATH = ROOT_DIR / "data" / "ready_button.json"
@@ -28,7 +34,7 @@ def on_click(x, y, button, pressed):
 
 def main():
     print("Ready button position recorder.")
-    time.sleep(3)
+    time.sleep(5)
     print("Click the Ready/Unready button now.")
 
     with mouse.Listener(on_click=on_click) as listener:

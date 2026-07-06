@@ -6,3 +6,7 @@ __pycache__/
 data/raw_screenshots/
 data/raw_uncropped/
 data/cropped/
+
+build
+dist
+TWR_Macro.spec

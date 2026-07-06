@@ -6504,15 +6504,5 @@
         "type": "mouse_move",
         "dx": -3,
         "dy": 0
-    },
-    {
-        "time": 50.02,
-        "type": "key_down",
-        "key": "w"
-    },
-    {
-        "time": 50.08,
-        "type": "key_up",
-        "key": "w"
     }
 ]
