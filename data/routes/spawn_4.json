@@ -4286,6 +4286,11 @@
         "dy": -3
     },
     {
+        "time": 13.7425,
+        "type": "key_down",
+        "key": "f6"
+    },
+    {
         "time": 13.7426,
         "type": "mouse_move",
         "dx": -22,
@@ -4298,9 +4303,14 @@
         "dy": -3
     },
     {
+        "time": 13.7515,
+        "type": "key_up",
+        "key": "f6"
+    },
+    {
         "time": 13.7579,
         "type": "mouse_move",
-        "dx": -26,
+        "dx": -40,
         "dy": -4
     },
     {
@@ -4854,16 +4864,6 @@
         "type": "mouse_move",
         "dx": 0,
         "dy": 1
-    },
-    {
-        "time": 16.3192,
-        "type": "key_down",
-        "key": "f6"
-    },
-    {
-        "time": 16.3655,
-        "type": "key_up",
-        "key": "f6"
     },
     {
         "time": 17.3845,
