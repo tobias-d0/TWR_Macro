@@ -1,7 +1,9 @@
 import json
+import heapq
 import cv2
 
 from src.config import CROPPED_DIR, CROP_CONFIG_PATH
+
 
 class SpawnDetector:
     def __init__(self):
@@ -15,6 +17,11 @@ class SpawnDetector:
     def _load_templates(self):
         templates = []
 
+        target_size = (
+            self.crop_box["w"],
+            self.crop_box["h"]
+        )
+
         for spawn_folder in CROPPED_DIR.iterdir():
             if not spawn_folder.is_dir():
                 continue
@@ -27,6 +34,15 @@ class SpawnDetector:
 
                 if image is None:
                     continue
+
+                image = cv2.resize(
+                    image,
+                    target_size,
+                    interpolation=cv2.INTER_AREA
+                )
+
+                # Preprocess once
+                image = cv2.GaussianBlur(image, (3, 3), 0)
 
                 templates.append({
                     "spawn": spawn_folder.name,
@@ -49,32 +65,46 @@ class SpawnDetector:
 
     def detect_spawn(self, image_bgr):
         cropped = self.crop(image_bgr)
-        cropped_gray = cv2.cvtColor(cropped, cv2.COLOR_BGR2GRAY)
 
-        scores = []
+        cropped_gray = cv2.cvtColor(
+            cropped,
+            cv2.COLOR_BGR2GRAY
+        )
+
+        # Apply same preprocessing
+        cropped_gray = cv2.GaussianBlur(
+            cropped_gray,
+            (3, 3),
+            0
+        )
+
+        best_per_spawn = {}
 
         for template in self.templates:
-            template_img = template["image"]
-
-            template_img = cv2.resize(
-                template_img,
-                (cropped_gray.shape[1], cropped_gray.shape[0])
-            )
-
             result = cv2.matchTemplate(
                 cropped_gray,
-                template_img,
+                template["image"],
                 cv2.TM_CCOEFF_NORMED
             )
 
             score = float(result[0][0])
 
-            scores.append({
-                "score": score,
-                "spawn": template["spawn"],
-                "file": template["file"]
-            })
+            spawn = template["spawn"]
 
-        scores.sort(key=lambda x: x["score"], reverse=True)
+            if (
+                spawn not in best_per_spawn
+                or score > best_per_spawn[spawn]["score"]
+            ):
+                best_per_spawn[spawn] = {
+                    "score": score,
+                    "spawn": spawn,
+                    "file": template["file"]
+                }
 
-        return scores[0], scores[:10]
+        top_scores = heapq.nlargest(
+            len(best_per_spawn),
+            best_per_spawn.values(),
+            key=lambda x: x["score"]
+        )
+
+        return top_scores[0], top_scores
