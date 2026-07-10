@@ -1,6 +1,7 @@
 import json
 import heapq
 import cv2
+import numpy as np
 
 from src.config import CROPPED_DIR, CROP_CONFIG_PATH
 
@@ -15,16 +16,18 @@ class SpawnDetector:
             return json.load(f)
 
     def _load_templates(self):
-        templates = []
-
         target_size = (
             self.crop_box["w"],
             self.crop_box["h"]
         )
 
+        spawn_images = {}
+
         for spawn_folder in CROPPED_DIR.iterdir():
             if not spawn_folder.is_dir():
                 continue
+
+            images = []
 
             for image_path in spawn_folder.iterdir():
                 if image_path.suffix.lower() not in [".png", ".jpg", ".jpeg"]:
@@ -41,14 +44,21 @@ class SpawnDetector:
                     interpolation=cv2.INTER_AREA
                 )
 
-                # Preprocess once
-                image = cv2.GaussianBlur(image, (3, 3), 0)
+                images.append(image.astype(np.float32))
 
-                templates.append({
-                    "spawn": spawn_folder.name,
-                    "file": image_path.name,
-                    "image": image
-                })
+            if images:
+                spawn_images[spawn_folder.name] = images
+
+        templates = []
+
+        for spawn_name, images in spawn_images.items():
+            average = np.mean(images, axis=0)
+            average = average.astype(np.uint8)
+
+            templates.append({
+                "spawn": spawn_name,
+                "image": average
+            })
 
         if not templates:
             raise RuntimeError("No templates found in data/cropped")
@@ -61,7 +71,7 @@ class SpawnDetector:
         w = self.crop_box["w"]
         h = self.crop_box["h"]
 
-        return image_bgr[y:y + h, x:x + w]
+        return image_bgr[y:y+h, x:x+w]
 
     def detect_spawn(self, image_bgr):
         cropped = self.crop(image_bgr)
@@ -71,14 +81,7 @@ class SpawnDetector:
             cv2.COLOR_BGR2GRAY
         )
 
-        # Apply same preprocessing
-        cropped_gray = cv2.GaussianBlur(
-            cropped_gray,
-            (3, 3),
-            0
-        )
-
-        best_per_spawn = {}
+        scores = []
 
         for template in self.templates:
             result = cv2.matchTemplate(
@@ -87,23 +90,15 @@ class SpawnDetector:
                 cv2.TM_CCOEFF_NORMED
             )
 
-            score = float(result[0][0])
-
-            spawn = template["spawn"]
-
-            if (
-                spawn not in best_per_spawn
-                or score > best_per_spawn[spawn]["score"]
-            ):
-                best_per_spawn[spawn] = {
-                    "score": score,
-                    "spawn": spawn,
-                    "file": template["file"]
-                }
+            scores.append({
+                "spawn": template["spawn"],
+                "score": float(result[0][0]),
+                "file": "average"
+            })
 
         top_scores = heapq.nlargest(
-            len(best_per_spawn),
-            best_per_spawn.values(),
+            len(scores),
+            scores,
             key=lambda x: x["score"]
         )
 
